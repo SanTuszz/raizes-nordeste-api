@@ -1,0 +1,216 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "API Rede Raizes do Nordeste",
+    "version": "1.0.0",
+    "description": "API REST desenvolvida para o Projeto Multidisciplinar - Trilha Back-End (UNINTER). Suporta pedidos multicanal, estoque por unidade e pagamento mock."
+  },
+  "servers": [
+    { "url": "http://localhost:3000/api", "description": "Servidor Local" }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "paths": {
+    "/auth/registrar": {
+      "post": {
+        "summary": "Cadastrar novo usuario (com consentimento LGPD)",
+        "tags": ["Auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nome": { "type": "string", "example": "Maria Silva" },
+                  "email": { "type": "string", "example": "maria@email.com" },
+                  "senha": { "type": "string", "example": "123456" },
+                  "perfil": { "type": "string", "example": "CLIENTE" },
+                  "consentimentoLgpd": { "type": "boolean", "example": true }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Usuario criado" },
+          "409": { "description": "E-mail ja cadastrado" },
+          "422": { "description": "Dados invalidos" }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "summary": "Autenticar usuario e obter token JWT",
+        "tags": ["Auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": { "type": "string", "example": "cliente@raizes.com" },
+                  "senha": { "type": "string", "example": "123456" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Login realizado com sucesso" },
+          "401": { "description": "Credenciais invalidas" }
+        }
+      }
+    },
+    "/unidades": {
+      "get": {
+        "summary": "Listar unidades ativas da rede",
+        "tags": ["Catalogo"],
+        "responses": { "200": { "description": "Lista de unidades" } }
+      }
+    },
+    "/produtos": {
+      "get": {
+        "summary": "Listar produtos do cardapio com paginacao",
+        "tags": ["Catalogo"],
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 10 } }
+        ],
+        "responses": { "200": { "description": "Lista de produtos" } }
+      }
+    },
+    "/estoque/{unidadeId}": {
+      "get": {
+        "summary": "Consultar estoque disponivel por unidade",
+        "tags": ["Catalogo"],
+        "parameters": [
+          { "name": "unidadeId", "in": "path", "required": true, "schema": { "type": "integer", "default": 1 } }
+        ],
+        "responses": { "200": { "description": "Itens em estoque na unidade" } }
+      }
+    },
+    "/pedidos": {
+      "post": {
+        "summary": "Criar novo pedido multicanal validando estoque",
+        "tags": ["Pedidos"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "unidadeId": { "type": "integer", "example": 1 },
+                  "canalPedido": { "type": "string", "example": "TOTEM" },
+                  "formaPagamento": { "type": "string", "example": "MOCK" },
+                  "itens": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "produtoId": { "type": "integer", "example": 1 },
+                        "quantidade": { "type": "integer", "example": 2 }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Pedido criado com sucesso" },
+          "404": { "description": "Unidade ou produto nao encontrado" },
+          "409": { "description": "Estoque insuficiente" },
+          "422": { "description": "Erro de validacao (ex: canalPedido invalido)" }
+        }
+      },
+      "get": {
+        "summary": "Listar pedidos com filtro por canalPedido e status",
+        "tags": ["Pedidos"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "canalPedido", "in": "query", "schema": { "type": "string", "example": "TOTEM" } },
+          { "name": "status", "in": "query", "schema": { "type": "string", "example": "AGUARDANDO_PAGAMENTO" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 10 } }
+        ],
+        "responses": { "200": { "description": "Lista paginada de pedidos" } }
+      }
+    },
+    "/pedidos/{id}/status": {
+      "patch": {
+        "summary": "Atualizar status operacional do pedido (Cozinha/Atendente/Gerente)",
+        "tags": ["Pedidos"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer", "example": 1 } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": { "type": "string", "example": "PRONTO" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Status atualizado" },
+          "403": { "description": "Perfil sem permissao" },
+          "404": { "description": "Pedido nao encontrado" }
+        }
+      }
+    },
+    "/pagamentos/mock": {
+      "post": {
+        "summary": "Simular pagamento externo (aprovado ou recusado)",
+        "tags": ["Pagamentos"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "pedidoId": { "type": "integer", "example": 1 },
+                  "simularRecusa": { "type": "boolean", "example": false }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Resultado do processamento mock" },
+          "404": { "description": "Pedido nao encontrado" }
+        }
+      }
+    },
+    "/auditoria/logs": {
+      "get": {
+        "summary": "Consultar logs de auditoria do sistema (Apenas GERENTE)",
+        "tags": ["Auditoria"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Lista de logs recentes" },
+          "403": { "description": "Acesso negado" }
+        }
+      }
+    }
+  }
+}
