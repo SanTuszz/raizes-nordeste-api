@@ -1,0 +1,251 @@
+{
+  "info": {
+    "name": "Rede Raizes do Nordeste - API Back-End",
+    "description": "Colecao de testes positivos e negativos para o Projeto Multidisciplinar UNINTER.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000/api" },
+    { "key": "tokenCliente", "value": "" },
+    { "key": "tokenGerente", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Auth",
+      "item": [
+        {
+          "name": "T01 - Login Cliente (Sucesso)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('tokenCliente', jsonData.accessToken);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"cliente@raizes.com\",\n  \"senha\": \"123456\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        },
+        {
+          "name": "T02 - Login Gerente (Sucesso)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('tokenGerente', jsonData.accessToken);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"gerente@raizes.com\",\n  \"senha\": \"123456\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        },
+        {
+          "name": "T03 - Cadastro Novo Usuario (Sucesso 201)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Joao Teste\",\n  \"email\": \"joao.teste@email.com\",\n  \"senha\": \"123456\",\n  \"perfil\": \"CLIENTE\",\n  \"consentimentoLgpd\": true\n}"
+            },
+            "url": "{{baseUrl}}/auth/registrar"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Catalogo e Estoque",
+      "item": [
+        {
+          "name": "T04 - Listar Produtos Paginado (Sucesso 200)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/produtos?page=1&limit=10"
+          }
+        },
+        {
+          "name": "T05 - Consultar Estoque Unidade 1 (Sucesso 200)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/estoque/1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Pedidos e Pagamento Mock (Fluxo Critico)",
+      "item": [
+        {
+          "name": "T06 - Criar Pedido Valido Canal TOTEM (Sucesso 201)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tokenCliente}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unidadeId\": 1,\n  \"canalPedido\": \"TOTEM\",\n  \"formaPagamento\": \"MOCK\",\n  \"itens\": [\n    { \"produtoId\": 1, \"quantidade\": 2 }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/pedidos"
+          }
+        },
+        {
+          "name": "T07 - Filtrar Pedidos por Canal TOTEM (Sucesso 200)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tokenCliente}}" }],
+            "url": "{{baseUrl}}/pedidos?canalPedido=TOTEM"
+          }
+        },
+        {
+          "name": "T08 - Pagamento Mock Aprovado (Sucesso 200)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tokenCliente}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pedidoId\": 1,\n  \"simularRecusa\": false\n}"
+            },
+            "url": "{{baseUrl}}/pagamentos/mock"
+          }
+        },
+        {
+          "name": "T09 - Atualizar Status para PRONTO como Gerente (Sucesso 200)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tokenGerente}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"PRONTO\"\n}"
+            },
+            "url": "{{baseUrl}}/pedidos/1/status"
+          }
+        },
+        {
+          "name": "T10 - Consultar Logs de Auditoria como Gerente (Sucesso 200)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tokenGerente}}" }],
+            "url": "{{baseUrl}}/auditoria/logs"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Cenarios Negativos (Erros e Regras)",
+      "item": [
+        {
+          "name": "T11 - Listar Pedidos Sem Token (Erro 401)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/pedidos"
+          }
+        },
+        {
+          "name": "T12 - Atualizar Status com Perfil CLIENTE (Erro 403)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tokenCliente}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ENTREGUE\"\n}"
+            },
+            "url": "{{baseUrl}}/pedidos/1/status"
+          }
+        },
+        {
+          "name": "T13 - Criar Pedido Sem canalPedido (Erro 422)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tokenCliente}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unidadeId\": 1,\n  \"itens\": [\n    { \"produtoId\": 1, \"quantidade\": 1 }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/pedidos"
+          }
+        },
+        {
+          "name": "T14 - Criar Pedido com Produto Inexistente (Erro 404)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tokenCliente}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unidadeId\": 1,\n  \"canalPedido\": \"APP\",\n  \"itens\": [\n    { \"produtoId\": 9999, \"quantidade\": 1 }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/pedidos"
+          }
+        },
+        {
+          "name": "T15 - Criar Pedido com Estoque Insuficiente (Erro 409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tokenCliente}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unidadeId\": 1,\n  \"canalPedido\": \"WEB\",\n  \"itens\": [\n    { \"produtoId\": 3, \"quantidade\": 2 }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/pedidos"
+          }
+        },
+        {
+          "name": "T16 - Pagamento Mock Recusado (Simulacao Negada)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tokenCliente}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pedidoId\": 1,\n  \"simularRecusa\": true\n}"
+            },
+            "url": "{{baseUrl}}/pagamentos/mock"
+          }
+        }
+      ]
+    }
+  ]
+}
